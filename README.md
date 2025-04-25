@@ -161,17 +161,6 @@ products, _ := repo.Search(price, geo, color).
 
 ---
 
-## Error Handling
-
-* All builders return an **empty string** if parameters are invalid; the
-  repository silently ignores empty parts.
-* `Repository.Exec` returns `fmt.Errorf("no rows")` if RediSearch did not return any hits.
-
----
-
-## License
-
-MIT – see [LICENSE](LICENSE) for details.
 
 
 
