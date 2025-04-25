@@ -159,7 +159,7 @@ products, _ := repo.Search(price, geo, color).
 
 `generateIndexQuery` inspects the tags once (at startup) to build `FT.CREATE`.
 
----
+
 
 
 
