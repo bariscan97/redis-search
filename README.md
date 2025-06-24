@@ -31,7 +31,7 @@ import (
     "log"
     "time"
 
-    "github.com/your‑module/redisft"
+    "github.com/bariscan97/redis-search/redisft"
 )
 
 type Product struct {
