@@ -14,7 +14,7 @@
 ## Installation
 
 ```bash
-go get github.com/bariscan97/redis-ftsearch
+go get github.com/bariscan97/redis-search/redisft
 ```
 
 > The module relies internally on **github.com/go-redis/redis/v8** (pulled automatically by `go get`).
@@ -31,7 +31,7 @@ import (
     "log"
     "time"
 
-    "github.com/your‑module/redisft"
+    "github.com/bariscan97/redis-search/redisft"
 )
 
 type Product struct {
