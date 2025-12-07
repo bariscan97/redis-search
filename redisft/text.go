@@ -131,15 +131,39 @@ func (q *QB) flushOp() {
 
 func (q *QB) GetFieldName() string { return q.field }
 
+// Fuzzy adds a fuzzy search term.
+// distance 1 => %term%
+// distance 2 => %%term%%
+// otherwise => wraps in %..% (defaulting to 1 if invalid, or just clamping)
+func (q *QB) Fuzzy(term string, distance int) *QB {
+	t := escape(term)
+	if distance > 2 {
+		distance = 2
+	}
+	if distance < 1 {
+		distance = 1
+	}
+	if distance == 1 {
+		return q.raw("%" + t + "%")
+	}
+	return q.raw("%%" + t + "%%")
+}
+
 func escape(s string) string {
-	replacer := strings.NewReplacer(
-		`"`, `\"`,
-		`\`, `\\`,
-		`|`, `\|`,
-		`(`, `\(`,
-		`)`, `\)`,
-		`{`, `\{`,
-		`}`, `\}`,
-	)
-	return replacer.Replace(s)
+	var sb strings.Builder
+	for _, r := range s {
+		if isSpecial(r) {
+			sb.WriteByte('\\')
+		}
+		sb.WriteRune(r)
+	}
+	return sb.String()
+}
+
+func isSpecial(r rune) bool {
+	switch r {
+	case ',', '.', '<', '>', '{', '}', '[', ']', '"', '\'', ':', ';', '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '+', '=', '~', '\\', '|', '/':
+		return true
+	}
+	return false
 }

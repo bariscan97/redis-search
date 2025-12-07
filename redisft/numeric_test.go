@@ -1,23 +1,21 @@
 package redisft
 
 import (
-	"fmt"
 	"testing"
 )
 
 func TestNumericQuery_Build(t *testing.T) {
 	t.Parallel()
-	infStr := fmt.Sprintf("%g", inf)
 	tests := []struct {
 		name string
 		q    *NumericQuery
 		want string
 	}{
 		{"empty", NewNumericQuery("f"), ""},
-		{"gt", NewNumericQuery("f").Gt(5), fmt.Sprintf("@f:(%g %s]", 5.0, infStr)},
-		{"ge", NewNumericQuery("f").Ge(5), fmt.Sprintf("@f:[%g %s]", 5.0, infStr)},
-		{"lt", NewNumericQuery("f").Lt(5), fmt.Sprintf("@f:[-%s %g)", infStr, 5.0)},
-		{"le", NewNumericQuery("f").Le(5), fmt.Sprintf("@f:[-%s %g]", infStr, 5.0)},
+		{"gt", NewNumericQuery("f").Gt(5), "@f:(5 +inf]"},
+		{"ge", NewNumericQuery("f").Ge(5), "@f:[5 +inf]"},
+		{"lt", NewNumericQuery("f").Lt(5), "@f:[-inf 5)"},
+		{"le", NewNumericQuery("f").Le(5), "@f:[-inf 5]"},
 		{"range_exclusive", NewNumericQuery("f").Range(1, 2, false, false), "@f:(1 2)"},
 		{"range_inclusive", NewNumericQuery("f").Range(1, 2, true, true), "@f:[1 2]"},
 		{"range_mixed", NewNumericQuery("f").Range(1, 2, true, false), "@f:[1 2)"},

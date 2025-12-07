@@ -24,6 +24,9 @@ func TestQB_Build(t *testing.T) {
 		{"all", NewTextQuery("field").All("x", "y", "z"), "@field:(x y z)"},
 		{"wild", NewTextQuery("field").Wild("foo|bar"), "@field:(foo\\|bar)"},
 		{"escape", NewTextQuery("field").Term("special|chars"), "@field:(special\\|chars)"},
+		{"escape_complex", NewTextQuery("field").Term("user@email.com"), "@field:(user\\@email\\.com)"},
+		{"fuzzy1", NewTextQuery("field").Fuzzy("apple", 1), "@field:(%apple%)"},
+		{"fuzzy2", NewTextQuery("field").Fuzzy("apple", 2), "@field:(%%apple%%)"},
 		{"group", NewTextQuery("field").Group(func(q *QB) {
 			q.Term("a")
 			q.Or()

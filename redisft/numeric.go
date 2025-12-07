@@ -2,17 +2,18 @@ package redisft
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 )
 
 type bound struct {
 	val       float64
-	exclusive bool 
+	exclusive bool
 }
 
 type interval struct {
-	lo, hi bound 
+	lo, hi bound
 }
 
 func (iv interval) toString(field string) string {
@@ -24,7 +25,18 @@ func (iv interval) toString(field string) string {
 	if iv.hi.exclusive {
 		rc = ')'
 	}
-	return fmt.Sprintf("@%s:%c%g %g%c", field, lc, iv.lo.val, iv.hi.val, rc)
+
+	loStr := fmt.Sprintf("%g", iv.lo.val)
+	if math.IsInf(iv.lo.val, -1) {
+		loStr = "-inf"
+	}
+
+	hiStr := fmt.Sprintf("%g", iv.hi.val)
+	if math.IsInf(iv.hi.val, 1) {
+		hiStr = "+inf"
+	}
+
+	return fmt.Sprintf("@%s:%c%s %s%c", field, lc, loStr, hiStr, rc)
 }
 
 type NumericQuery struct {
@@ -35,7 +47,6 @@ type NumericQuery struct {
 func NewNumericQuery(field string) *NumericQuery { return &NumericQuery{field: field} }
 func (n *NumericQuery) GetFieldName() string     { return n.field }
 
-
 // Gt  ⇒ (v  +inf]
 func (n *NumericQuery) Gt(v float64) *NumericQuery { return n.add(bound{v, true}, bound{inf, false}) }
 
@@ -43,11 +54,14 @@ func (n *NumericQuery) Gt(v float64) *NumericQuery { return n.add(bound{v, true}
 func (n *NumericQuery) Ge(v float64) *NumericQuery { return n.add(bound{v, false}, bound{inf, false}) }
 
 // Lt  ⇒ [-inf  v)
-func (n *NumericQuery) Lt(v float64) *NumericQuery { return n.add(bound{-inf, false}, bound{v, true}) }
+func (n *NumericQuery) Lt(v float64) *NumericQuery {
+	return n.add(bound{negInf, false}, bound{v, true})
+}
 
 // Le  ⇒ [-inf  v]
-func (n *NumericQuery) Le(v float64) *NumericQuery { return n.add(bound{-inf, false}, bound{v, false}) }
-
+func (n *NumericQuery) Le(v float64) *NumericQuery {
+	return n.add(bound{negInf, false}, bound{v, false})
+}
 
 // Range – custom bounds; inclusivity defined by flags
 func (n *NumericQuery) Range(lo, hi float64, inclLo, inclHi bool) *NumericQuery {
@@ -89,10 +103,11 @@ func (n *NumericQuery) Build() string {
 	return strings.Join(parts, " | ")
 }
 
-const inf = 9e99
+var inf = math.Inf(1)
+var negInf = math.Inf(-1)
 
 func (n *NumericQuery) add(lo, hi bound) *NumericQuery {
-	if lo.val > hi.val { 
+	if lo.val > hi.val {
 		lo.val, hi.val = hi.val, lo.val
 	}
 	n.intervals = append(n.intervals, interval{lo: lo, hi: hi})

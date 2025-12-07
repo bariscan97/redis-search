@@ -8,11 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/go-redis/redis/v8"
 )
 
-func fillStructsFromFTSearch(ctx context.Context, rdb *redis.Client, index, query string, destSlicePtr interface{}) error {
+func fillStructsFromFTSearch(ctx context.Context, rdb RedisClient, index, query string, destSlicePtr interface{}) error {
 	rv := reflect.ValueOf(destSlicePtr)
 	if rv.Kind() != reflect.Ptr || rv.Elem().Kind() != reflect.Slice {
 		return errors.New("destSlicePtr must be pointer to a slice")
@@ -28,11 +26,13 @@ func fillStructsFromFTSearch(ctx context.Context, rdb *redis.Client, index, quer
 		return err
 	}
 	rows, ok := res.([]interface{})
-	if !ok || len(rows) < 3 {
-		return errors.New("FT.SEARCH: no results")
+	if !ok {
+		return errors.New("FT.SEARCH: invalid response format")
+	}
+	if len(rows) < 2 {
+		return nil
 	}
 
-	// rows = [total, id1, fields1, id2, fields2, ...]
 	for i := 1; i < len(rows); i += 2 {
 		fieldsArr, ok := rows[i+1].([]interface{})
 		if !ok {
@@ -112,7 +112,7 @@ func generateIndexQuery(input any) []any {
 	args := []any{"idx:" + name, "ON", "HASH", "PREFIX", 1, name + ":", "SCHEMA"}
 	for i := 0; i < t.NumField(); i++ {
 		sf := t.Field(i)
-		if tag := sf.Tag.Get("redisom"); tag != "" {
+		if tag := sf.Tag.Get("redis"); tag != "" {
 			args = append(args, strings.ToLower(sf.Name))
 			for _, tok := range strings.Fields(tag) {
 				args = append(args, strings.ToUpper(tok))

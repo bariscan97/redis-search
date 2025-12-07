@@ -10,12 +10,21 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-type ConnPool interface {
-	Get() *redis.Client 
-	Close() error       
+type RedisClient interface {
+	Do(ctx context.Context, args ...interface{}) *redis.Cmd
+	HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
+	Del(ctx context.Context, keys ...string) *redis.IntCmd
+	Pipeline() redis.Pipeliner
+	Ping(ctx context.Context) *redis.StatusCmd
+	Close() error
 }
 
-type SingleHostPool struct{ *redis.Client }
+type ConnPool interface {
+	Get() RedisClient
+	Close() error
+}
+
+type SingleHostPool struct{ Client *redis.Client }
 
 func NewSingleHostPool(host string, maxConns int) *SingleHostPool {
 	rdb := redis.NewClient(&redis.Options{
@@ -26,11 +35,11 @@ func NewSingleHostPool(host string, maxConns int) *SingleHostPool {
 			return cn.Ping(ctx).Err()
 		},
 	})
-	return &SingleHostPool{rdb}
+	return &SingleHostPool{Client: rdb}
 }
 
-func (p *SingleHostPool) Get() *redis.Client { return p.Client }
-func (p *SingleHostPool) Close() error       { return p.Client.Close() }
+func (p *SingleHostPool) Get() RedisClient { return p.Client }
+func (p *SingleHostPool) Close() error     { return p.Client.Close() }
 
 type MultiHostPool struct {
 	pools []*redis.Client
@@ -45,7 +54,7 @@ func NewMultiHostPool(addrs []string, maxConns int) *MultiHostPool {
 	return &MultiHostPool{pools: ps}
 }
 
-func (m *MultiHostPool) Get() *redis.Client {
+func (m *MultiHostPool) Get() RedisClient {
 	if len(m.pools) == 1 {
 		return m.pools[0]
 	}
@@ -75,8 +84,8 @@ func NewClient(addr, name string, maxConns int) *Client {
 	return &Client{pool: pool, name: name}
 }
 
-func (c *Client) Get() *redis.Client { return c.pool.Get() }
-func (c *Client) Close() error       { return c.pool.Close() }
+func (c *Client) Get() RedisClient { return c.pool.Get() }
+func (c *Client) Close() error     { return c.pool.Close() }
 
 
 type Repository[T any] struct {
@@ -236,8 +245,11 @@ func (r *Repository[T]) Exec(ctx context.Context) ([]T, error) {
 	}
 
 	rows, ok := raw.([]interface{})
-	if !ok || len(rows) < 3 {
-		return nil, fmt.Errorf("no rows")
+	if !ok {
+		return nil, fmt.Errorf("invalid response format")
+	}
+	if len(rows) < 2 {
+		return []T{}, nil
 	}
 
 	var out []T
