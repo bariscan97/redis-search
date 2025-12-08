@@ -41,16 +41,13 @@ func NewPool(host string, maxConns int) *Pool {
 func (p *Pool) Get() RedisClient { return p.Client }
 func (p *Pool) Close() error     { return p.Client.Close() }
 
-
-
 type Client struct {
 	pool ConnPool
-	name string
 }
 
-func NewClient(addr, name string, maxConns int) *Client {
+func NewClient(addr string, maxConns int) *Client {
 	pool := NewPool(addr, maxConns)
-	return &Client{pool: pool, name: name}
+	return &Client{pool: pool}
 }
 
 func (c *Client) Get() RedisClient { return c.pool.Get() }
