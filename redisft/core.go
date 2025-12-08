@@ -24,9 +24,9 @@ type ConnPool interface {
 	Close() error
 }
 
-type SingleHostPool struct{ Client *redis.Client }
+type Pool struct{ Client *redis.Client }
 
-func NewSingleHostPool(host string, maxConns int) *SingleHostPool {
+func NewPool(host string, maxConns int) *Pool {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:        host,
 		PoolSize:    maxConns,
@@ -35,38 +35,13 @@ func NewSingleHostPool(host string, maxConns int) *SingleHostPool {
 			return cn.Ping(ctx).Err()
 		},
 	})
-	return &SingleHostPool{Client: rdb}
+	return &Pool{Client: rdb}
 }
 
-func (p *SingleHostPool) Get() RedisClient { return p.Client }
-func (p *SingleHostPool) Close() error     { return p.Client.Close() }
+func (p *Pool) Get() RedisClient { return p.Client }
+func (p *Pool) Close() error     { return p.Client.Close() }
 
-type MultiHostPool struct {
-	pools []*redis.Client
-	i     int
-}
 
-func NewMultiHostPool(addrs []string, maxConns int) *MultiHostPool {
-	ps := make([]*redis.Client, len(addrs))
-	for k, a := range addrs {
-		ps[k] = NewSingleHostPool(a, maxConns).Client
-	}
-	return &MultiHostPool{pools: ps}
-}
-
-func (m *MultiHostPool) Get() RedisClient {
-	if len(m.pools) == 1 {
-		return m.pools[0]
-	}
-	m.i = (m.i + 1) % len(m.pools)
-	return m.pools[m.i]
-}
-func (m *MultiHostPool) Close() error {
-	for _, p := range m.pools {
-		_ = p.Close()
-	}
-	return nil
-}
 
 type Client struct {
 	pool ConnPool
@@ -74,13 +49,7 @@ type Client struct {
 }
 
 func NewClient(addr, name string, maxConns int) *Client {
-	addrs := strings.Split(addr, ",")
-	var pool ConnPool
-	if len(addrs) == 1 {
-		pool = NewSingleHostPool(addrs[0], maxConns)
-	} else {
-		pool = NewMultiHostPool(addrs, maxConns)
-	}
+	pool := NewPool(addr, maxConns)
 	return &Client{pool: pool, name: name}
 }
 

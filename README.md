@@ -2,7 +2,7 @@
 
 **A lightweight, idiomatic Go helper layer on top of [RediSearch](https://oss.redis.com/redisearch/).**
 
-- Minimal **connection‑pool** wrappers (single‑ or multi‑host)
+- Minimal **connection‑pool** wrapper
 - Generic **Repository[T]** with CRUD + chainable query builder
 - Composable builders for **TEXT**, **NUMERIC**, **GEO**, and **TAG** fields
 - Pure Go — no CGO, no reflection in hot paths
@@ -71,23 +71,10 @@ func main() {
 
 ## Connection Pooling
 
-### Single host
+### Pool
 
 ```go
-pool := redisft.NewSingleHostPool("localhost:6379", 300)
-```
-
-### Multi‑host (round‑robin)
-
-```go
-pool := redisft.NewMultiHostPool([]string{
-    "cache‑a:6379", "cache‑b:6379", "cache‑c:6379"}, 300)
-```
-
-`redisft.NewClient` selects the correct pool automatically from a comma‑separated list:
-
-```go
-cli := redisft.NewClient("cache‑a:6379,cache‑b:6379", "myprefix", 300)
+pool := redisft.NewPool("localhost:6379", 300)
 ```
 
 ---
